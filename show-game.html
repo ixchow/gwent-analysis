@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+//set up styles for cards and such:
+(function (){
+	var style = document.createElement("style");
+	style.appendChild(document.createTextNode(""
+		+ 'div.gwent { height:120px; width:300px; border:1px solid black; margin:5px; padding:0; color:black; position:relative; font-family:"Times New Roman"; font-size:16px; }\n'
+
+		+ 'div.gwent div.player { position:absolute; height:60px; left:0; right:0; overflow:hidden; }\n'
+		+ 'div.gwent div.player.top { background:#faa; top:0; }\n'
+		+ 'div.gwent div.player.bottom { background:#aef; bottom:0; }\n'
+
+		+ 'div.gwent div.player div.name { position:absolute; left:0; padding:2px; font-size:16px; }\n'
+		+ 'div.gwent div.player.top div.name { top:0; }\n'
+		+ 'div.gwent div.player.bottom div.name { bottom:0; }\n'
+
+		+ 'div.gwent div.player div.status { position:absolute; left:2px; top:20px; bottom:20px; font-size:14px; border: 2px solid black; border-radius:5px; width:52px; text-align:center; }\n'
+		+ 'div.gwent div.player div.status.passed:after { content:"passed"; }\n'
+		+ 'div.gwent div.player div.status.current:after { content:"current"; }\n'
+
+		+ 'div.gwent div.scores { position:absolute; left:0; top:40px; bottom:40px; width:60px; margin:0; padding:0; }\n'
+
+		+ 'div.gwent div.scores div.round { width:20px; height:40px; float:left; margin:0; padding:0; color:#888; }\n'
+		+ 'div.gwent div.scores div.round div.score { position:absolute; width:20px; height:20px; text-align:center; line-height:20px; }\n'
+		+ 'div.gwent div.scores div.round div.score.top { top:0px; }\n'
+		+ 'div.gwent div.scores div.round div.score.bottom { bottom:0px; }\n'
+
+		+ 'div.gwent div.scores div.round.top div.score.top { background:#fe0; color:#540; border-radius:6px; }\n'
+		+ 'div.gwent div.scores div.round.bottom div.score.bottom { background:#ff0; color:#540; border-radius:6px; }\n'
+		+ 'div.gwent div.scores div.round.both { background:#ff0; color:#540; border-radius:6px; }\n'
+		+ 'div.gwent div.scores div.round.current { background:#bbb; color:#000; border-radius:6px; }\n'
+
+		+ 'div.gwent div.player div.cards { position:absolute; left:68px; right:0px; top:8px; bottom:8px; }\n'
+		+ 'div.gwent div.player div.cards div.card { float:left; width:40px; height:40px; border-radius:6px; border-width:2px; border-style:solid; text-align:left; vertical-align:top; display:table-cell; margin-right:-30px; margin-bottom:-20px; }\n'
+		+ 'div.gwent div.player div.cards div.card:hover { margin-top:-5px; margin-bottom:5px; }\n'
+		+ 'div.gwent div.player div.cards div.card.bronze { background:#deaa87; border-color:#a86941; color:#523017; }\n'
+		+ 'div.gwent div.player div.cards div.card.silver { background:#eceff0; border-color:#93b1bc; color:#1b3037; }\n'
+		+ 'div.gwent div.player div.cards div.card.gold { background:#fea; border-color:#a80; color:#540; }\n'
+
+		));
+	document.head.appendChild(style);
+})();
+function showGame(info) {
+	document.write('<div class="gwent">');
+	function showPlayer(p) {
+		document.write('<div class="name">' + p.name + '</div>');
+		if ('status' in p) {
+			document.write('<div class="status ' + p.status + '"></div>');
+		}
+		document.write('<div class="cards">');
+		p.cards.forEach(function(c) {
+			if (c < 10) document.write('<div class="card bronze">' + c + '</div>');
+			else if (c < 12) document.write('<div class="card silver">' + c + '</div>');
+			else document.write('<div class="card gold">' + c + '</div>');
+		});
+		document.write('</div>');
+	}
+	document.write('<div class="player top">');
+	showPlayer(info.top);
+	document.write('</div>');
+	document.write('<div class="player bottom">');
+	showPlayer(info.bottom);
+	document.write('</div>');
+	document.write('<div class="scores">');
+	for (var i = 0; i < 3; ++i) {
+		var pt = info.top.points[i];
+		var pb = info.bottom.points[i];
+		if (typeof(pt) !== 'number' || typeof(pb) !== 'number') {
+			break;
+		}
+		if (i+1 < info.top.points.length || i + 1 < info.bottom.points.length) {
+			//finished round ==> not the last in the array
+			if (pt > pb) {
+				document.write('<div class="round top">');
+			} else if (pt < pb) {
+				document.write('<div class="round bottom">');
+			} else if (pt < pb) {
+				document.write('<div class="round both">');
+			}
+		} else {
+			document.write('<div class="round current">');
+		}
+		document.write('<div class="score top">' + pt + '</div>');
+		document.write('<div class="score bottom">' + pb + '</div>');
+		document.write('</div>');
+	}
+	document.write('</div>');
+	document.write('</div>');
+}
+</script>
+</head>
+<body>
+<script>
+showGame({
+top:{name:"A", points:[0,1], status:"current", cards:[1,1,7,8,9, 10,11,12,1,1]},
+bottom:{name:"B", points:[3,1], cards:[1,1,1,1,1, 1,1,1,1,1]},
+});
+</script>
+<script>
+//starting state:
+var start = {
+	round:1,
+	current:"A",
+	first_this_round:"A",
+	A:{passed:false, rounds:0, score:0, cards:{7:7, 10:2, 12:1}},
+	B:{passed:false, rounds:0, score:0, cards:{7:7, 10:2, 12:1}},
+}
+function clone(x) {
+	if (typeof(x) !== "object") return x;
+	var ret = {};
+	for (var n in x) ret[n] = clone(x[n]);
+	return ret;
+}
+var memo = {};
+function winner(state) {
+	var key = toString(state);
+	if (key in memo) return memo[key];
+
+    if (state.A.passed && state.B.passed) {
+        //end of the round.
+
+        //set up state for next round:
+        var next = clone(state);
+        next.round += 1;
+        next.A.passed = false; next.A.score = 0;
+        next.B.passed = false; next.B.score = 0;
+        /*if (next.round == 2) { next.A.cards7 += 2; next.B.cards7 += 2; }
+        if (next.round == 3) { next.A.cards7 += 1; next.B.cards7 += 1; }*/
+        
+        if (state.A.score < state.B.score) {
+            //"B" won, so goes first next round
+            next.B.rounds += 1;
+            if (next.B.rounds === 2) return (memo[key] = "B");
+            next.first_this_round = next.current = "B";
+            return winner(next);
+        } else if (state.A.score > state.B.score) {
+            //"A" won, so goes first next round
+            next.A.rounds += 1;
+            if (next.A.rounds === 2) return (memo[key] = "A");
+            next.first_this_round = next.current = "A";
+            return winner(next);
+        } else { //tie round; switch who goes first (I guess?)
+            next.A.rounds += 1;
+            next.B.rounds += 1;
+            if (next.A.rounds === 2 && next.B.rounds === 2) return (memo[key] = "C");
+            if (next.A.rounds === 2) return (memo[key] = "A");
+            if (next.B.rounds === 2) return (memo[key] = "B");
+            next.first_this_round = next.current = (state.first_this_round === "A" ? "B" : "A");
+            return winner(next);
+        }
+    } else if (state.current === "A") {
+        var pass = clone(state);
+        pass.current = "B";
+        pass.A.passed = true;
+        var pass_winner = winner(pass);
+		//if "A" has already passed, must only pass:
+		if (state.A.passed) return (memo[key] = pass_winner);
+		if (pass_winner === "A") return (memo[key] = pass_winner);
+		var can_tie = (pass_winner === "C");
+
+		for (var c in state.A.cards) {
+			if (state.A.cards[c] > 0) {
+				var play = clone(state);
+				play.current = "B";
+				play.A.cards[c] -= 1;
+				play.A.score += parseInt(c);
+				var play_winner = winner(play);
+				if (play_winner === "A") return (memo[key] = play_winner);
+				if (play_winner === "C") can_tie = true;
+			}
+		}
+
+		if (can_tie) return (memo[key] = "C");
+		else return (memo[key] = "B");
+    } else if (state.current === "B") {
+ 		var pass = clone(state);
+        pass.current = "A";
+        pass.B.passed = true;
+        var pass_winner = winner(pass);
+		//if "B" has already passed, must only pass:
+		if (state.B.passed) return (memo[key] = pass_winner);
+		if (pass_winner === "B") return (memo[key] = pass_winner);
+		var can_tie = (pass_winner === "C");
+
+		for (var c in state.B.cards) {
+			if (state.B.cards[c] > 0) {
+				var play = clone(state);
+				play.current = "A";
+				play.B.cards[c] -= 1;
+				play.B.score += parseInt(c);
+				var play_winner = winner(play);
+				if (play_winner === "B") return (memo[key] = play_winner);
+				if (play_winner === "C") can_tie = true;
+			}
+		}
+
+		if (can_tie) return (memo[key] = "C");
+		else return (memo[key] = "A");
+    }
+}
+</script>
+<script>
+//state = {
+//  round:1,
+//  current:"A",
+//  first_this_round:"A",
+//  A:{passed:false, rounds:0, score:0, cards:10},
+//  B:{passed:false, rounds:0, score:0, cards:10},
+//}
+console.log("1-Gwent:");
+console.log(winner({
+  round:1,
+  current:"A",
+  first_this_round:"A",
+  A:{passed:false, rounds:0, score:0, cards:{1:10}},
+  B:{passed:false, rounds:0, score:0, cards:{1:10}},
+}));
+console.log("3-Gwent:");
+console.log(winner({
+  round:1,
+  current:"A",
+  first_this_round:"A",
+  A:{passed:false, rounds:0, score:0, cards:{7:7,10:2,12:1}},
+  B:{passed:false, rounds:0, score:0, cards:{7:7,10:2,12:1}},
+}));
+</script>
+</body>
+
+
